@@ -1,0 +1,33 @@
+///////////////////////Bug log of mp2/////////////////////
+//////////////////////weisong4@illinois//////////////////
+//////////////////////NET ID: weisong4///////////////////
+
+
+
+
+
+Warning bugs:
+
+1.The first bug that I met is that when I run the adventure, the QEMU crashed in blackness for no reason.
+	for (i=0;i<STATUS_X_DIM;i++) 
+    {
+        for (j=0;j<STATUS_Y_DIM;j++)
+        {
+            status_buffer[i*STATUS_X_DIM+j]=0;/* fill the status bar with the color of background */
+        }
+    }
+For this code, I wrongly put STATUS_Y_DIM and STATUS_X_DIM in the opposite position, which makes it a segmentation fault and let the kernal crash.
+I ran the gdb and found that there was a seg fault here.
+
+2.When I run my adventure, there's nothing in the bottom of the screen.
+
+I found it's that my caculation of my split screen is wrong. I re-caculated it and get the right register editted and the bug is fixed.
+
+3. When I run the adventure after I fixed the above two bugs, I found the position of the character is not correct.
+The offset of one of my position is not right.
+ status_plane_buffer[m*STATUS_X_WIDTH+n]=status_buffer[m*STATUS_X_DIM+4*n+i];
+I firstly wrongly caculated the offset.
+
+4. I found the bottom is flashing rapidly
+I didn't change the value of target_img to 0X05A0 but 0000;
+	
