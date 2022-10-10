@@ -351,10 +351,10 @@ display_time_on_tux (int num_seconds)
 
 
 #if (TEST_INPUT_DRIVER == 1)
+/*
 int
 main ()
 {	
-	/* opens the tty port and sets the line discipline*/
 
     cmd_t last_cmd = CMD_NONE;
     cmd_t cmd;
@@ -364,7 +364,6 @@ main ()
 	"move left", "enter", "move right", "typed command", "quit"
     };
 
-    /* Grant ourselves permission to use ports 0-1023 */
     if (ioperm (0, 1024, 1) == -1) {
 	perror ("ioperm");
 	return 3;
@@ -385,7 +384,7 @@ main ()
     shutdown_input ();
     return 0;
 }
-#endif
+#endif*/
 
 /* 
  * get_tux_command
