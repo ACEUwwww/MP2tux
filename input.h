@@ -47,19 +47,33 @@ typedef enum {
     NUM_COMMANDS
 } cmd_t;
 
+#define is_start   0x01
+#define is_a       0x02
+#define is_b       0x04
+#define is_c       0x08
+#define is_up      0x10
+#define is_down    0x20
+#define is_left    0x40
+#define is_right   0x80
+
 #define MAX_TYPED_LEN 20
-
+#define sec_per_min 60
+#define LED_off     4
+#define four_mask   0x0F
+#define decimal2    0x04000000
+#define LED_3       0x00070000
+#define LED_4       0x000F0000
+#define Max_time    5999
+#define dirc_mask   0xF0
+#define ABCS_mask   0x0F
 /* Initialize the input device. */
-extern int init_input();
-
-/* start the input device*/
-extern void start_input();
+extern int init_input ();
 
 /* Read a command from the input device. */
 extern cmd_t get_command ();
 
-/* Read a command from the input device. */
-extern cmd_t get_tux_cmd();
+/* Read a command from the TUX device. */
+extern cmd_t get_tux_command();
 
 /* Get currently typed command string. */
 extern const char* get_typed_command ();
@@ -76,4 +90,6 @@ extern void shutdown_input ();
  */
 extern void display_time_on_tux (int num_seconds);
 
+/* Get the fd. */
+extern int get_fd();
 #endif /* INPUT_H */
