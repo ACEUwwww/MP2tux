@@ -56,6 +56,8 @@
 
 #include "assert.h"
 #include "input.h"
+#include "./module/module/tuxctl-ioctl.h"
+#include "./module/module/mtcp.h"
 
 /* set to 1 and compile this file by itself to test functionality */
 #define TEST_INPUT_DRIVER 0
@@ -66,8 +68,24 @@
 
 /* stores original terminal settings */
 static struct termios tio_orig;
+static cmd_t old_cmd = CMD_NONE; 
+static int fd;				
 
-
+/* 
+ * start_input
+ *   DESCRIPTION: Initializes the input controller. 
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: none 
+ *   SIDE EFFECTS: changes the status
+ */
+void start_input() {
+	fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY);
+	int ldsic_num = N_MOUSE;
+	int ioctl_return;
+	ioctl_return = ioctl(fd, TIOCSETD, &ldsic_num);
+	ioctl(fd, TUX_INIT);
+}
 /* 
  * init_input
  *   DESCRIPTION: Initializes the input controller.  As both keyboard and
@@ -120,6 +138,7 @@ init_input ()
     return 0;
 }
 
+
 static char typing[MAX_TYPED_LEN + 1] = {'\0'};
 
 const char*
@@ -167,9 +186,7 @@ typed_a_char (char c)
  *   RETURN VALUE: command issued by the input controller
  *   SIDE EFFECTS: drains any keyboard input
  */
-cmd_t 
-get_command ()
-{
+cmd_t get_command (){
 #if (USE_TUX_CONTROLLER == 0) /* use keyboard control with arrow keys */
     static int state = 0;             /* small FSM for arrow keys */
 #endif
@@ -281,6 +298,67 @@ get_command ()
 }
 
 /* 
+ * get_tux_command
+ *   DESCRIPTION: Reads a command from the input controller.  
+ *   INPUTS: none
+ *   OUTPUTS: none
+ *   RETURN VALUE: command issued by the input controller
+ *   SIDE EFFECTS: drains any keyboard input
+ */
+cmd_t get_tux_cmd(){
+
+	unsigned long cmd;		//arg contains right, left, down, up, c, b, a, start in the last eight bits
+	cmd = 0;
+	ioctl(fd, TUX_BUTTONS, &cmd);
+	cmd_t this_cmd = CMD_NONE;
+
+	switch(cmd & 0xff) {  // cmd is a 8bits length variable
+		// right
+		case 0x7f: 
+			old_cmd = CMD_RIGHT;
+			return old_cmd;
+		// left
+		case 0xbf:
+			old_cmd = CMD_LEFT;
+			return CMD_LEFT;	
+		// down
+		case 0xdf:
+			old_cmd = CMD_DOWN;
+			return CMD_DOWN;
+		// up
+		case 0xef:
+			old_cmd = CMD_UP;
+			return CMD_UP;
+		// c
+		case 0xf7 :
+			this_cmd = CMD_MOVE_RIGHT;
+			break;
+		// b
+		case 0xfb:
+			this_cmd = CMD_ENTER;
+			break;
+		// a
+		case 0xfd:
+			this_cmd = CMD_MOVE_LEFT;
+			break;
+		// start
+		case 0xfe:
+			this_cmd = CMD_QUIT;
+			break;
+		default:
+			break;
+	}
+
+	if(this_cmd != old_cmd || this_cmd == CMD_NONE) {
+		old_cmd = this_cmd;
+		return this_cmd;
+	}
+	
+	return CMD_NONE;
+}
+
+
+/* 
  * shutdown_input
  *   DESCRIPTION: Cleans up state associated with input control.  Restores
  *                original terminal settings.
@@ -307,10 +385,26 @@ shutdown_input ()
  */
 void
 display_time_on_tux (int num_seconds)
-{
-#if (USE_TUX_CONTROLLER != 0)
-#error "Tux controller code is not operational yet."
-#endif
+{ 
+//#if (USE_TUX_CONTROLLER != 0)
+//#error "Tux controller code is not operational yet."
+//#endif
+
+	int minutes,seconds;
+	uint32_t time;
+
+	minutes = num_seconds / 60; // every minute has 60 seconds
+	seconds = num_seconds % 60; // the rest seconds
+
+	if (minutes >= 10){ // if time >= 10 minutes, set all LEDs on, otherwise, only show the minute(3rd) LED
+		time = 0x040F0000;
+	}else{
+		time = 0x04070000;
+	}
+	// the bits should be in this order: 10 minute(4 bits) , minutes(4 bits), 10 seconds(4 bits), seconds(4 bits)
+	time = time | (((minutes/10)&0x0f) << 12) |(((minutes % 10)&0x0f) << 8) | (((seconds/10)&0x0f) << 4) | (((seconds % 10)&0x0f)) ;
+
+	ioctl(fd,TUX_SET_LED,time);
 }
 
 
@@ -318,7 +412,8 @@ display_time_on_tux (int num_seconds)
 int
 main ()
 {
-    cmd_t last_cmd = CMD_NONE;
+    int i =1;
+	cmd_t last_cmd = CMD_NONE;
     cmd_t cmd;
     static const char* const cmd_name[NUM_COMMANDS] = {
         "none", "right", "left", "up", "down", 
@@ -332,13 +427,16 @@ main ()
     }
 
     init_input ();
+	start_input();
+	//display_time_on_tux (83);
     while (1) {
-        while ((cmd = get_command ()) == last_cmd);
+		i++;
+        while ((cmd = get_tux_cmd()) == last_cmd);
 	last_cmd = cmd;
 	printf ("command issued: %s\n", cmd_name[cmd]);
 	if (cmd == CMD_QUIT)
 	    break;
-	display_time_on_tux (83);
+	display_time_on_tux (i);
     }
     shutdown_input ();
     return 0;

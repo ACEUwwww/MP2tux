@@ -50,10 +50,16 @@ typedef enum {
 #define MAX_TYPED_LEN 20
 
 /* Initialize the input device. */
-extern int init_input ();
+extern int init_input();
+
+/* start the input device*/
+extern void start_input();
 
 /* Read a command from the input device. */
 extern cmd_t get_command ();
+
+/* Read a command from the input device. */
+extern cmd_t get_tux_cmd();
 
 /* Get currently typed command string. */
 extern const char* get_typed_command ();
